@@ -20,7 +20,7 @@ from datetime import datetime
 import random
 import time
 import json
-import pathlib
+import pathlib, argparse
 
 def mse(input, target):
     return ((input - target) ** 2).mean()
@@ -213,9 +213,18 @@ def launch_training(dataset_json, optimizer_name, params_dict,
     if dist.get_rank() == 0:
         with open(folder + '/parameters.json', 'w') as outfile:
             json.dump(parameters, outfile, default=default)
+        print('gROM training final loss = %.4f.' % loss)
     return gnn_model, loss, mae, dataset, coefs_dict, folder, parameters
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='gROM SimVascular Project.')
+
+    parser.add_argument('--bs', help='batch size', type=int, default=359)
+    parser.add_argument('--epoch', help='total number of epochs', type=int, default=30)
+
+    args = parser.parse_args()
+    print('hyper-parameters: bs = %d, epoch = %d.' % (args.bs, args.epoch))
+
     dist.init_process_group(backend='mpi')
     print("my rank = %d, world = %d." % (dist.get_rank(), dist.get_world_size()), flush=True)
     dataset_json = json.load(open('training_dataset.json'))
@@ -231,8 +240,8 @@ if __name__ == "__main__":
     train_params = {'learning_rate': 0.008223127794360673,
                     'weight_decay': 0.36984122162067234,
                     'momentum': 0.0,
-                    'batch_size': 359,
-                    'nepochs': 30}
+                    'batch_size': args.bs, # 359,
+                    'nepochs': args.epoch} # 30
     dataset_params = {'normalization': 'standard',
                       'rate_noise': 0.006,
                       'label_normalization': 'min_max'}
